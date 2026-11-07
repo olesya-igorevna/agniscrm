@@ -1,0 +1,81 @@
+@base = http://localhost:8080
+@contactId = 4
+
+### Проверка сервера
+GET {{base}}/health
+
+### Список
+GET {{base}}/api/v1/contacts
+
+### Начальная карточка
+GET {{base}}/api/v1/contacts/1
+
+### Создание (на свежем сервере id = 4)
+POST {{base}}/api/v1/contacts
+Content-Type: application/json
+
+{
+  "first_name": "Арина",
+  "last_name": "Тестовая",
+  "phone": "+79990000000",
+  "email": "arina@example.com",
+  "telegram": "arina_test",
+  "company_id": 1,
+  "owner_id": 3,
+  "tags": ["лид", "лид", "новый"],
+  "comment": "Проверка контактов"
+}
+
+### Созданная карточка (после повторного создания подставьте новый id)
+GET {{base}}/api/v1/contacts/{{contactId}}
+
+### Полная замена полей; пропущенные необязательные поля сбросятся
+POST {{base}}/api/v1/contacts/{{contactId}}/update
+Content-Type: application/json
+
+{
+  "first_name": "Арина",
+  "phone": "+79990000001",
+  "company_id": null,
+  "tags": [],
+  "comment": "Карточка обновлена; owner_id станет 1"
+}
+
+### Удаление созданного контакта
+POST {{base}}/api/v1/contacts/{{contactId}}/delete
+
+### Ошибка: отсутствует имя, ожидается 400 validation_error
+POST {{base}}/api/v1/contacts
+Content-Type: application/json
+
+{"phone": "+79990000000"}
+
+### Ошибка: нет способа связи, ожидается 400 validation_error, поле contacts
+POST {{base}}/api/v1/contacts
+Content-Type: application/json
+
+{"first_name": "Тест"}
+
+### Ошибка: несуществующая компания, ожидается 400 validation_error
+POST {{base}}/api/v1/contacts
+Content-Type: application/json
+
+{"first_name": "Тест", "telegram": "test_user", "company_id": 999}
+
+### Ошибка JSON: 400 invalid_json
+POST {{base}}/api/v1/contacts
+Content-Type: application/json
+
+{"first_name":
+
+### Неверный id: 400 invalid_id
+GET {{base}}/api/v1/contacts/abc
+
+### Несуществующая карточка: 404 not_found
+GET {{base}}/api/v1/contacts/999999
+
+### Контакт используется начальной сделкой: 409 conflict
+POST {{base}}/api/v1/contacts/1/delete
+
+### Неподдерживаемый метод: 405 method_not_allowed
+DELETE {{base}}/api/v1/contacts/1
