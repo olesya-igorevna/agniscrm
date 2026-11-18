@@ -1,11 +1,7 @@
 package handler_test
 
 import (
-	"agnis-crm/internal/domain"
-	"agnis-crm/internal/handler"
-	"agnis-crm/internal/storage"
-	"agnis-crm/internal/storage/memory"
-	"agnis-crm/internal/usecase"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,6 +9,12 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"agnis-crm/internal/domain"
+	"agnis-crm/internal/handler"
+	"agnis-crm/internal/storage"
+	"agnis-crm/internal/storage/memory"
+	"agnis-crm/internal/usecase"
 
 	"github.com/gin-gonic/gin"
 )
@@ -172,14 +174,17 @@ func TestConcurrentCreatesAndCopies(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if _, err := s.CreateContact(in); err != nil {
+			if _, err := s.CreateContact(context.Background(), in); err != nil {
 				t.Error(err)
 			}
-			s.ListContacts()
+			s.ListContacts(context.Background())
 		}()
 	}
 	wg.Wait()
-	items := s.ListContacts()
+	items, err := s.ListContacts(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(items) != 30 {
 		t.Fatalf("lost contacts: %d", len(items))
 	}
@@ -190,7 +195,7 @@ func TestConcurrentCreatesAndCopies(t *testing.T) {
 	}
 	in.Tags[0] = "изменён"
 	items[0].Tags[0] = "подмена"
-	stored, err := s.GetContact(1)
+	stored, err := s.GetContact(context.Background(), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,4 +230,26 @@ func TestSharedSkeletonRegistration(t *testing.T) {
 	}
 	created := contact(t, request(t, r, "POST", "/api/v1/contacts", `{"first_name":"Тест","telegram":"test_user"}`, 201))
 	request(t, r, "GET", fmt.Sprintf("/api/v1/contacts/%d", created.ID), "", 200)
+}
+
+// TestRecoveryPanicTo500 проверяет НФТ-03: паника в обработчике не роняет
+// сервер, а превращается в 500 internal_error (gin.New() + CustomRecovery).
+func TestRecoveryPanicTo500(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := handler.New(usecase.New(storage.New()))
+	r := gin.New()
+	h.Register(r) // подключает Logging + CustomRecovery
+
+	// Маршрут добавляем ПОСЛЕ Register, чтобы на него распространились middleware.
+	r.GET("/boom", func(c *gin.Context) { panic("test panic") })
+
+	req := httptest.NewRequest("GET", "/boom", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != 500 {
+		t.Fatalf("panic route: got %d, want 500: %s", w.Code, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), `"internal_error"`) {
+		t.Fatalf("want internal_error body, got %s", w.Body.String())
+	}
 }

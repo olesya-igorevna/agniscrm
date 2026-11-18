@@ -46,8 +46,6 @@ func contactInput(c *gin.Context) (domain.ContactInput, bool) {
 	if err := json.Unmarshal(raw, &fields); err != nil || fields == nil {
 		return invalid()
 	}
-	// encoding/json accepts null for a string without an error. The contract
-	// uses empty strings instead; only company_id is a nullable editable field.
 	for _, key := range []string{"first_name", "last_name", "phone", "email", "telegram", "owner_id", "tags", "comment"} {
 		if value, ok := fields[key]; ok && bytes.Equal(bytes.TrimSpace(value), []byte("null")) {
 			return invalid()
@@ -64,7 +62,7 @@ func contactInput(c *gin.Context) (domain.ContactInput, bool) {
 			}
 		}
 	}
-	// Unknown and server-owned fields are ignored, as required by the TZ.
+	
 	if err := json.Unmarshal(raw, &in); err != nil {
 		return invalid()
 	}
@@ -72,7 +70,11 @@ func contactInput(c *gin.Context) (domain.ContactInput, bool) {
 }
 
 func (h *Handler) ListContacts(c *gin.Context) {
-	items := h.uc.Contacts.List()
+	items, err := h.uc.Contacts.List(c.Request.Context())
+	if err != nil {
+		domainError(c, err)
+		return
+	}
 	c.JSON(200, gin.H{"items": items, "total": len(items)})
 }
 
@@ -81,7 +83,7 @@ func (h *Handler) GetContact(c *gin.Context) {
 	if !ok {
 		return
 	}
-	contact, err := h.uc.Contacts.Get(id)
+	contact, err := h.uc.Contacts.Get(c.Request.Context(), id)
 	if err != nil {
 		domainError(c, err)
 		return
@@ -94,7 +96,7 @@ func (h *Handler) CreateContact(c *gin.Context) {
 	if !ok {
 		return
 	}
-	contact, err := h.uc.Contacts.Create(in)
+	contact, err := h.uc.Contacts.Create(c.Request.Context(), in)
 	if err != nil {
 		domainError(c, err)
 		return
@@ -111,7 +113,7 @@ func (h *Handler) UpdateContact(c *gin.Context) {
 	if !ok {
 		return
 	}
-	contact, err := h.uc.Contacts.Update(id, in)
+	contact, err := h.uc.Contacts.Update(c.Request.Context(), id, in)
 	if err != nil {
 		domainError(c, err)
 		return
@@ -124,7 +126,7 @@ func (h *Handler) DeleteContact(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.uc.Contacts.Delete(id); err != nil {
+	if err := h.uc.Contacts.Delete(c.Request.Context(), id); err != nil {
 		domainError(c, err)
 		return
 	}

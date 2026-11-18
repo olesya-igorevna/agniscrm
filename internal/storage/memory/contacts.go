@@ -1,10 +1,12 @@
 package memory
 
 import (
-	"agnis-crm/internal/domain"
+	"context"
 	"sort"
 	"sync"
 	"time"
+
+	"agnis-crm/internal/domain"
 )
 
 // ContactRelations is a temporary fixture for entities owned by other teammates.
@@ -77,7 +79,7 @@ func contactFromInput(in domain.ContactInput) domain.Contact {
 	return clone(c)
 }
 
-func (s *Store) ListContacts() []domain.Contact {
+func (s *Store) ListContacts(ctx context.Context) ([]domain.Contact, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	items := make([]domain.Contact, 0, len(s.contacts))
@@ -85,10 +87,10 @@ func (s *Store) ListContacts() []domain.Contact {
 		items = append(items, clone(c))
 	}
 	sort.Slice(items, func(i, j int) bool { return items[i].ID < items[j].ID })
-	return items
+	return items, nil
 }
 
-func (s *Store) GetContact(id int64) (domain.Contact, error) {
+func (s *Store) GetContact(ctx context.Context, id int64) (domain.Contact, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	c, ok := s.contacts[id]
@@ -113,7 +115,7 @@ func (s *Store) checkReferences(in domain.ContactInput) error {
 	return nil
 }
 
-func (s *Store) CreateContact(in domain.ContactInput) (domain.Contact, error) {
+func (s *Store) CreateContact(ctx context.Context, in domain.ContactInput) (domain.Contact, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.checkReferences(in); err != nil {
@@ -127,7 +129,7 @@ func (s *Store) CreateContact(in domain.ContactInput) (domain.Contact, error) {
 	return clone(c), nil
 }
 
-func (s *Store) UpdateContact(id int64, in domain.ContactInput) (domain.Contact, error) {
+func (s *Store) UpdateContact(ctx context.Context, id int64, in domain.ContactInput) (domain.Contact, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	old, ok := s.contacts[id]
@@ -143,7 +145,7 @@ func (s *Store) UpdateContact(id int64, in domain.ContactInput) (domain.Contact,
 	return clone(c), nil
 }
 
-func (s *Store) DeleteContact(id int64) error {
+func (s *Store) DeleteContact(ctx context.Context, id int64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.contacts[id]; !ok {

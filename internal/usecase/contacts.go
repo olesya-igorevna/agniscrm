@@ -1,44 +1,54 @@
 package usecase
 
 import (
-	"agnis-crm/internal/domain"
+	"context"
 	"net/mail"
 	"regexp"
 	"strings"
 	"unicode/utf8"
+
+	"agnis-crm/internal/domain"
 )
 
-// ContactRepository must validate references and deletion conflicts atomically
-// with writes, so concurrent entity operations cannot leave broken references.
+
 type ContactRepository interface {
-	ListContacts() []domain.Contact
-	GetContact(int64) (domain.Contact, error)
-	CreateContact(domain.ContactInput) (domain.Contact, error)
-	UpdateContact(int64, domain.ContactInput) (domain.Contact, error)
-	DeleteContact(int64) error
+	ListContacts(ctx context.Context) ([]domain.Contact, error)
+	GetContact(ctx context.Context, id int64) (domain.Contact, error)
+	CreateContact(ctx context.Context, in domain.ContactInput) (domain.Contact, error)
+	UpdateContact(ctx context.Context, id int64, in domain.ContactInput) (domain.Contact, error)
+	DeleteContact(ctx context.Context, id int64) error
 }
 
 type Contacts struct{ store ContactRepository }
 
-func NewContacts(store ContactRepository) *Contacts      { return &Contacts{store: store} }
-func (s *Contacts) List() []domain.Contact               { return s.store.ListContacts() }
-func (s *Contacts) Get(id int64) (domain.Contact, error) { return s.store.GetContact(id) }
-func (s *Contacts) Delete(id int64) error                { return s.store.DeleteContact(id) }
+func NewContacts(store ContactRepository) *Contacts { return &Contacts{store: store} }
 
-func (s *Contacts) Create(in domain.ContactInput) (domain.Contact, error) {
-	in, err := normalizeContact(in)
-	if err != nil {
-		return domain.Contact{}, err
-	}
-	return s.store.CreateContact(in)
+func (s *Contacts) List(ctx context.Context) ([]domain.Contact, error) {
+	return s.store.ListContacts(ctx)
 }
 
-func (s *Contacts) Update(id int64, in domain.ContactInput) (domain.Contact, error) {
+func (s *Contacts) Get(ctx context.Context, id int64) (domain.Contact, error) {
+	return s.store.GetContact(ctx, id)
+}
+
+func (s *Contacts) Delete(ctx context.Context, id int64) error {
+	return s.store.DeleteContact(ctx, id)
+}
+
+func (s *Contacts) Create(ctx context.Context, in domain.ContactInput) (domain.Contact, error) {
 	in, err := normalizeContact(in)
 	if err != nil {
 		return domain.Contact{}, err
 	}
-	return s.store.UpdateContact(id, in)
+	return s.store.CreateContact(ctx, in)
+}
+
+func (s *Contacts) Update(ctx context.Context, id int64, in domain.ContactInput) (domain.Contact, error) {
+	in, err := normalizeContact(in)
+	if err != nil {
+		return domain.Contact{}, err
+	}
+	return s.store.UpdateContact(ctx, id, in)
 }
 
 var phonePattern = regexp.MustCompile(`^\+[0-9]{10,15}$`)

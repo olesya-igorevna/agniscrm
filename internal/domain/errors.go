@@ -3,8 +3,10 @@ package domain
 import "errors"
 
 var (
-	ErrNotFound = errors.New("entity not found")
-	ErrConflict = errors.New("entity is in use")
+	ErrNotFound    = errors.New("entity not found")
+	ErrConflict    = errors.New("entity is in use")
+	ErrTimeout     = errors.New("operation timed out")
+	ErrUnavailable = errors.New("storage unavailable")
 )
 
 type FieldError struct {

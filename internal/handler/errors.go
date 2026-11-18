@@ -25,6 +25,10 @@ func domainError(c *gin.Context, err error) {
 		writeError(c, 404, "not_found", "контакт не найден")
 	case errors.Is(err, domain.ErrConflict):
 		writeError(c, 409, "conflict", "контакт используется в сделках или задачах")
+	case errors.Is(err, domain.ErrTimeout):
+		writeError(c, 504, "timeout", "превышено время ожидания базы данных")
+	case errors.Is(err, domain.ErrUnavailable):
+		writeError(c, 503, "unavailable", "база данных недоступна")
 	default:
 		log.Printf("contact operation failed: %v", err)
 		writeError(c, 500, "internal_error", "внутренняя ошибка сервера")

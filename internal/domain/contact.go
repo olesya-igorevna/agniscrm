@@ -18,8 +18,7 @@ type Contact struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// ContactInput contains only editable fields. Update replaces all these fields.
-// A pointer distinguishes an omitted owner_id (default 1) from explicit zero.
+
 type ContactInput struct {
 	FirstName string   `json:"first_name"`
 	LastName  string   `json:"last_name"`

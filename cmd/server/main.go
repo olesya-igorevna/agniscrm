@@ -4,6 +4,8 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 
 	"agnis-crm/internal/config"
 	"agnis-crm/internal/handler"
@@ -12,14 +14,24 @@ import (
 )
 
 func main() {
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("config: %v", err)
+	}
+
+	db, err := sqlx.Connect("postgres", cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("connect database: %v", err)
+	}
+	defer db.Close()
 
 	// Слои снизу вверх: storage → usecase → handler.
-	st := storage.New()
+	st := storage.NewWithDB(db, cfg.DBTimeout)
 	uc := usecase.New(st)
 	h := handler.New(uc)
 
-	router := gin.Default()
+	// gin.New() без встроенных Logger/Recovery: логирование и восстановление
+	router := gin.New()
 	h.Register(router)
 
 	log.Printf("serving HTTP on %s", cfg.Addr)
