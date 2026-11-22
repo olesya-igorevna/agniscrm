@@ -2,19 +2,14 @@ package handler
 
 import (
 	"agnis-crm/internal/domain"
+	"agnis-crm/internal/httpx"
 	"errors"
 	"log"
 
 	"github.com/gin-gonic/gin"
 )
 
-func writeError(c *gin.Context, status int, code, message string, details ...domain.FieldError) {
-	body := gin.H{"code": code, "message": message}
-	if len(details) > 0 {
-		body["details"] = details
-	}
-	c.AbortWithStatusJSON(status, gin.H{"error": body})
-}
+var writeError = httpx.WriteError
 
 func domainError(c *gin.Context, err error) {
 	var validation *domain.ValidationError
@@ -22,11 +17,11 @@ func domainError(c *gin.Context, err error) {
 	case errors.As(err, &validation):
 		writeError(c, 400, "validation_error", "некорректные данные", validation.Details...)
 	case errors.Is(err, domain.ErrNotFound):
-		writeError(c, 404, "not_found", "контакт не найден")
+		writeError(c, 404, "not_found", "запись не найдена")
 	case errors.Is(err, domain.ErrConflict):
-		writeError(c, 409, "conflict", "контакт используется в сделках или задачах")
+		writeError(c, 409, "conflict", "запись используется в других данных")
 	default:
-		log.Printf("contact operation failed: %v", err)
+		log.Printf("operation failed: %v", err)
 		writeError(c, 500, "internal_error", "внутренняя ошибка сервера")
 	}
 }
