@@ -1,0 +1,14 @@
+# Only application sources and dependency manifests are needed for the build.
+**
+!Dockerfile
+!.dockerignore
+!go.mod
+!go.sum
+!cmd/
+!cmd/**
+!internal/
+!internal/**
+
+# Do not send environment files, even if placed under an included directory.
+**/.env
+**/.env.*
