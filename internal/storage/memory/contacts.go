@@ -35,9 +35,7 @@ func New(rel ContactRelations) *Store {
 	for _, id := range rel.DealContactIDs {
 		s.usedContacts[id] = true
 	}
-	for _, id := range rel.TaskContactIDs {
-		s.usedContacts[id] = true
-	}
+
 	return s
 }
 
@@ -45,10 +43,12 @@ func NewWithSeed() *Store {
 	s := New(ContactRelations{UserIDs: []int64{1, 2, 3}, CompanyIDs: []int64{1, 2}, DealContactIDs: []int64{1, 2, 3}})
 	company1, company2, owner3, owner2 := int64(1), int64(2), int64(3), int64(2)
 	seed := []domain.ContactInput{
-		{FirstName: "Иван", LastName: "Петров", Phone: "+79991234567", CompanyID: &company1, OwnerID: &owner3},
-		{FirstName: "Ольга", LastName: "Соколова", Phone: "+79161112233", CompanyID: &company2, OwnerID: &owner3},
-		// Appendix A omits a contact channel for Sergey; do not invent one.
-		{FirstName: "Сергей", LastName: "Лебедев", OwnerID: &owner2},
+		{FirstName: "Иван", LastName: "Петров", Phone: "+79991234567",
+			Email: "i.petrov@vector.example", CompanyID: &company1, OwnerID: &owner3},
+		{FirstName: "Ольга", LastName: "Соколова", Phone: "+79161112233",
+			CompanyID: &company2, OwnerID: &owner3},
+		{FirstName: "Сергей", LastName: "Лебедев",
+			Email: "s.lebedev@mail.example", OwnerID: &owner2},
 	}
 	for _, in := range seed {
 		in.Tags = []string{}
